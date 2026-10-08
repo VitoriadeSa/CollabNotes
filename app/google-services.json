@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "388060357753",
+    "project_id": "collabnotes-207cb",
+    "storage_bucket": "collabnotes-207cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:388060357753:android:21ee4170c83f5dcf4f20a8",
+        "android_client_info": {
+          "package_name": "com.collabnotes"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "388060357753-94kf61jk7ln4kj6eu9nlm7b8h4prjsbl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD23X-0sRSf2PBHSRPKAIXm-5LdpOwHeWQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "388060357753-94kf61jk7ln4kj6eu9nlm7b8h4prjsbl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
