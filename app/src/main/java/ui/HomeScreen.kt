@@ -20,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.collabnotes.data.NotesRepository
 import com.collabnotes.model.Note
+import com.collabnotes.model.toColorHex
 import com.collabnotes.ui.components.NoteCard
 import com.collabnotes.ui.components.SearchBar
 import com.google.firebase.auth.FirebaseAuth
@@ -50,6 +52,28 @@ fun HomeScreen(
     val context = LocalContext.current
     val userHandle = currentUserEmail.substringBefore("@")
 
+    val repository = remember { NotesRepository() }
+    var isShowingCachedData by remember { mutableStateOf(false) }
+
+    // Escuta em tempo real: o Firestore chama o callback sempre que as notas mudam
+    // (incluindo alterações de outros utilizadores e escritas feitas offline).
+    DisposableEffect(auth?.currentUser?.uid) {
+        if (auth?.currentUser == null) {
+            onDispose { }
+        } else {
+            val registration = repository.listenToNotes(
+                onChange = { notes, fromCache ->
+                    notesState.value = notes
+                    isShowingCachedData = fromCache
+                },
+                onError = { e ->
+                    Toast.makeText(context, "Erro ao carregar notas: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            )
+            onDispose { registration.remove() }
+        }
+    }
+
     // Estados
     var selectedFilterColor by remember { mutableStateOf<Color?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -64,7 +88,7 @@ fun HomeScreen(
     val filteredNotes = if (selectedFilterColor == null) {
         notesState.value
     } else {
-        notesState.value.filter { it.colorHex == selectedFilterColor!!.value.toLong() }
+        notesState.value.filter { it.colorHex == selectedFilterColor!!.toColorHex() }
     }
 
     Scaffold(
@@ -131,6 +155,16 @@ fun HomeScreen(
                 color = Color.DarkGray
             )
 
+            // Aviso quando os dados vêm da cache local (offline ou ainda a sincronizar)
+            if (isShowingCachedData) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "A usar dados locais (offline ou a sincronizar)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
             // Indicador visual de filtro de cor ativo
             if (selectedFilterColor != null) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -174,7 +208,10 @@ fun HomeScreen(
                                 selectedColorForEdit = Color(note.colorHex)
                             },
                             onDeleteClick = {
-                                notesState.value = notesState.value.filter { it.id != note.id }
+                                // A lista atualiza sozinha através do listener em tempo real
+                                repository.deleteNote(note.id).addOnFailureListener { e ->
+                                    Toast.makeText(context, "Erro ao eliminar: ${e.message}", Toast.LENGTH_LONG).show()
+                                }
                                 Toast.makeText(context, "Nota eliminada", Toast.LENGTH_SHORT).show()
                             }
                         )
@@ -197,9 +234,11 @@ fun HomeScreen(
                         val note = Note(
                             content = newNoteText,
                             authorEmail = currentUserEmail,
-                            colorHex = selectedColorForNew.value.toLong()
+                            colorHex = selectedColorForNew.toColorHex()
                         )
-                        notesState.value = listOf(note) + notesState.value
+                        repository.addNote(note).addOnFailureListener { e ->
+                            Toast.makeText(context, "Erro ao criar: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
                         showAddDialog = false
                         Toast.makeText(context, "Nota criada!", Toast.LENGTH_SHORT).show()
                     }
@@ -219,15 +258,12 @@ fun HomeScreen(
                 onDismiss = { noteToEdit = null },
                 onConfirm = {
                     if (editedNoteText.isNotBlank()) {
-                        notesState.value = notesState.value.map {
-                            if (it.id == currentNote.id) {
-                                it.copy(
-                                    content = editedNoteText,
-                                    colorHex = selectedColorForEdit.value.toLong()
-                                )
-                            } else {
-                                it
-                            }
+                        repository.updateNote(
+                            id = currentNote.id,
+                            content = editedNoteText,
+                            colorHex = selectedColorForEdit.toColorHex()
+                        ).addOnFailureListener { e ->
+                            Toast.makeText(context, "Erro ao guardar: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                         noteToEdit = null
                         Toast.makeText(context, "Nota atualizada!", Toast.LENGTH_SHORT).show()
