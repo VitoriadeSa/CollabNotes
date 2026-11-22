@@ -24,6 +24,7 @@ import com.collabnotes.data.NotesRepository
 import com.collabnotes.model.Note
 import com.collabnotes.model.toColorHex
 import com.collabnotes.ui.components.NoteCard
+import com.collabnotes.ui.components.NoteHistoryDialog
 import com.collabnotes.ui.components.SearchBar
 import com.google.firebase.auth.FirebaseAuth
 
@@ -81,6 +82,7 @@ fun HomeScreen(
     var selectedColorForNew by remember { mutableStateOf(postItColors[0]) }
 
     var noteToEdit by remember { mutableStateOf<Note?>(null) }
+    var noteForHistory by remember { mutableStateOf<Note?>(null) }
     var editedNoteText by remember { mutableStateOf("") }
     var selectedColorForEdit by remember { mutableStateOf(postItColors[0]) }
 
@@ -207,6 +209,7 @@ fun HomeScreen(
                                 editedNoteText = note.content
                                 selectedColorForEdit = Color(note.colorHex)
                             },
+                            onHistoryClick = { noteForHistory = note },
                             onDeleteClick = {
                                 // A lista atualiza sozinha através do listener em tempo real
                                 repository.deleteNote(note.id).addOnFailureListener { e ->
@@ -258,18 +261,32 @@ fun HomeScreen(
                 onDismiss = { noteToEdit = null },
                 onConfirm = {
                     if (editedNoteText.isNotBlank()) {
-                        repository.updateNote(
-                            id = currentNote.id,
-                            content = editedNoteText,
-                            colorHex = selectedColorForEdit.toColorHex()
-                        ).addOnFailureListener { e ->
-                            Toast.makeText(context, "Erro ao guardar: ${e.message}", Toast.LENGTH_LONG).show()
+                        val newColorHex = selectedColorForEdit.toColorHex()
+                        // Só regista uma edição se algo mudou
+                        if (editedNoteText != currentNote.content || newColorHex != currentNote.colorHex) {
+                            repository.updateNote(
+                                id = currentNote.id,
+                                content = editedNoteText,
+                                colorHex = newColorHex,
+                                editorEmail = currentUserEmail
+                            ).addOnFailureListener { e ->
+                                Toast.makeText(context, "Erro ao guardar: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                            Toast.makeText(context, "Nota atualizada!", Toast.LENGTH_SHORT).show()
                         }
                         noteToEdit = null
-                        Toast.makeText(context, "Nota atualizada!", Toast.LENGTH_SHORT).show()
                     }
                 },
                 confirmButtonText = "Guardar"
+            )
+        }
+
+        // Histórico de edições (quem alterou e quando)
+        noteForHistory?.let { note ->
+            NoteHistoryDialog(
+                note = note,
+                repository = repository,
+                onDismiss = { noteForHistory = null }
             )
         }
     }

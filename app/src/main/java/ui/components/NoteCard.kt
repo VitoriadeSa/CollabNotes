@@ -1,5 +1,6 @@
 package com.collabnotes.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,7 +12,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.collabnotes.model.Note
@@ -21,36 +25,52 @@ fun NoteCard(
     note: Note,
     currentUserEmail: String,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onHistoryClick: () -> Unit
 ) {
     val isAuthor = note.authorEmail == currentUserEmail
-    // Força a leitura do valor da cor guardada na nota
     val cardColor = if (note.colorHex != 0L) Color(note.colorHex) else Color(0xFFFFF9C4)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp)
+            .height(180.dp)
             .shadow(4.dp, RoundedCornerShape(4.dp)),
         shape = RoundedCornerShape(4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = cardColor, // Pinta APENAS o fundo do cartão com a cor escolhida
+            containerColor = cardColor,
             contentColor = Color.Black
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(12.dp)
         ) {
             Text(
                 text = note.content,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Black,
-                maxLines = 5,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
+
+            // Última edição: quem e quando. Toque para ver o histórico completo.
+            if (note.lastEditedAt > 0L) {
+                Text(
+                    text = "Editada por ${note.lastEditorHandle} · ${formatShortDateTime(note.lastEditedAt)}",
+                    fontSize = 9.sp,
+                    fontStyle = FontStyle.Italic,
+                    textDecoration = TextDecoration.Underline,
+                    color = Color.DarkGray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .padding(vertical = 4.dp)
+                        .clickable { onHistoryClick() }
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -65,19 +85,21 @@ fun NoteCard(
                     fontSize = 10.sp
                 )
 
-                if (isAuthor) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        IconButton(
-                            onClick = onEditClick,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = "Editar",
-                                tint = Color.DarkGray,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // Qualquer utilizador pode editar
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Editar",
+                            tint = Color.DarkGray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    // Só o autor pode eliminar
+                    if (isAuthor) {
                         IconButton(
                             onClick = onDeleteClick,
                             modifier = Modifier.size(24.dp)
