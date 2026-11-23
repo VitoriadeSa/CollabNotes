@@ -19,6 +19,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.collabnotes.model.Note
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun NoteCard(
@@ -117,3 +120,12 @@ fun NoteCard(
         }
     }
 }
+
+private fun formatShortDateTime(timestamp: Long): String {
+    val formatter = SimpleDateFormat(
+        "dd/MM/yyyy HH:mm",
+        Locale.getDefault()
+    )
+    return formatter.format(Date(timestamp))
+}
+

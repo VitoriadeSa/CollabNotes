@@ -209,13 +209,18 @@ fun HomeScreen(
                                 editedNoteText = note.content
                                 selectedColorForEdit = Color(note.colorHex)
                             },
-                            onHistoryClick = { noteForHistory = note },
                             onDeleteClick = {
-                                // A lista atualiza sozinha através do listener em tempo real
                                 repository.deleteNote(note.id).addOnFailureListener { e ->
-                                    Toast.makeText(context, "Erro ao eliminar: ${e.message}", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Erro ao eliminar: ${e.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                                 Toast.makeText(context, "Nota eliminada", Toast.LENGTH_SHORT).show()
+                            },
+                            onHistoryClick = {
+                                noteForHistory = note
                             }
                         )
                     }
